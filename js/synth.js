@@ -123,29 +123,17 @@ function noteOn( note, velocity ) {
 	console.log("note on: " + note );
 	
 	if(midiOut) {
-		midiOut.send( new Uint8Array( [ 0x90, 0x45, 0x7f ] ) );
-		//console.log('midiout here');
-	}
-	
-	if (voices[note] == null) {
-		// Create a new synth node
-		voices[note] = new Voice(note, velocity);
-		var e = document.getElementById( "k" + note );
-		if (e)
-			e.classList.add("pressed");
+		midiOut.send( new Uint8Array( [ 0x90, note, velocity ] ) );
 	}
 }
 
 function noteOff( note ) {
-	if (voices[note] != null) {
-		// Shut off the note playing and clear it 
-		voices[note].noteOff();
-		voices[note] = null;
-		var e = document.getElementById( "k" + note );
-		if (e)
-			e.classList.remove("pressed");
+	
+	if(midiOut) {
+		midiOut.send( new Uint8Array( [ 0x80, note, 0x00 ] ) );
+		//console.log('midiout here');
 	}
-
+	
 }
 
 function $(id) {
@@ -440,26 +428,6 @@ function onUpdateReverb( ev ) {
 	revGain.gain.value = gain2;
 }
 
-/*
-var FOURIER_SIZE = 2048;
-var wave = false;
-
-	if ( wave ) {
-		var real = new Float32Array(FOURIER_SIZE);
-		var imag = new Float32Array(FOURIER_SIZE);
-		real[0] = 0.0;
-		imag[0] = 0.0;
-
-		for (var i=1; i<FOURIER_SIZE; i++) {
-			real[i]=1.0;
-			imag[i]=1.0;
-		}
-
-		var wavetable = audioContext.createWaveTable(real, imag);
-		oscillatorNode.setWaveTable(wavetable);
-	} else {
-
-*/
 
 function filterFrequencyFromCutoff( pitch, cutoff ) {
     var nyquist = 0.5 * audioContext.sampleRate;
@@ -472,101 +440,10 @@ function filterFrequencyFromCutoff( pitch, cutoff ) {
 }
 
 function Voice( note, velocity ) {
-	this.originalFrequency = frequencyFromNoteNumber( note );
+	//this.originalFrequency = frequencyFromNoteNumber( note );
+	
+	// send MIDI out here
 
-	// create osc 1
-	this.osc1 = audioContext.createOscillator();
-	this.updateOsc1Frequency();
-	this.osc1.type = waveforms[currentOsc1Waveform];
-
-	this.osc1Gain = audioContext.createGain();
-	this.osc1Gain.gain.value = 0.005 * currentOsc1Mix;
-//	this.osc1Gain.gain.value = 0.05 + (0.33 * velocity);
-	this.osc1.connect( this.osc1Gain );
-
-	// create osc 2
-	this.osc2 = audioContext.createOscillator();
-	this.updateOsc2Frequency();
-	this.osc2.type = waveforms[currentOsc2Waveform];
-
-	this.osc2Gain = audioContext.createGain();
-	this.osc2Gain.gain.value = 0.005 * currentOsc2Mix;
-//	this.osc2Gain.gain.value = 0.05 + (0.33 * velocity);
-	this.osc2.connect( this.osc2Gain );
-
-	// create modulator osc
-	this.modOsc = audioContext.createOscillator();
-	this.modOsc.type = 	waveforms[currentModWaveform];
-	this.modOsc.frequency.value = currentModFrequency * modOscFreqMultiplier;
-
-	this.modOsc1Gain = audioContext.createGain();
-	this.modOsc.connect( this.modOsc1Gain );
-	this.modOsc1Gain.gain.value = currentModOsc1/10;
-	this.modOsc1Gain.connect( this.osc1.frequency );	// tremolo
-
-	this.modOsc2Gain = audioContext.createGain();
-	this.modOsc.connect( this.modOsc2Gain );
-	this.modOsc2Gain.gain.value = currentModOsc2/10;
-	this.modOsc2Gain.connect( this.osc2.frequency );	// tremolo
-
-	// create the LP filter
-	this.filter1 = audioContext.createBiquadFilter();
-	this.filter1.type = "lowpass";
-	this.filter1.Q.value = currentFilterQ;
-	this.filter1.frequency.value = Math.pow(2, currentFilterCutoff); 
-	// filterFrequencyFromCutoff( this.originalFrequency, currentFilterCutoff );
-//	console.log( "filter frequency: " + this.filter1.frequency.value);
-	this.filter2 = audioContext.createBiquadFilter();
-	this.filter2.type = "lowpass";
-	this.filter2.Q.value = currentFilterQ;
-	this.filter2.frequency.value = Math.pow(2, currentFilterCutoff); 
-
-	this.osc1Gain.connect( this.filter1 );
-	this.osc2Gain.connect( this.filter1 );
-	this.filter1.connect( this.filter2 );
-
-	// connect the modulator to the filters
-	this.modFilterGain = audioContext.createGain();
-	this.modOsc.connect( this.modFilterGain );
-	this.modFilterGain.gain.value = currentFilterMod*24;
-//	console.log("modFilterGain=" + currentFilterMod*24);
-	this.modFilterGain.connect( this.filter1.detune );	// filter tremolo
-	this.modFilterGain.connect( this.filter2.detune );	// filter tremolo
-
-	// create the volume envelope
-	this.envelope = audioContext.createGain();
-	this.filter2.connect( this.envelope );
-	this.envelope.connect( effectChain );
-
-	// set up the volume and filter envelopes
-	var now = audioContext.currentTime;
-	var envAttackEnd = now + (currentEnvA/20.0);
-
-	this.envelope.gain.value = 0.0;
-	this.envelope.gain.setValueAtTime( 0.0, now );
-	this.envelope.gain.linearRampToValueAtTime( 1.0, envAttackEnd );
-	this.envelope.gain.setTargetAtTime( (currentEnvS/100.0), envAttackEnd, (currentEnvD/100.0)+0.001 );
-
-	var filterAttackLevel = currentFilterEnv*72;  // Range: 0-7200: 6-octave range
-	var filterSustainLevel = filterAttackLevel* currentFilterEnvS / 100.0; // range: 0-7200
-	var filterAttackEnd = (currentFilterEnvA/20.0);
-
-/*	console.log( "filterAttackLevel: " + filterAttackLevel + 
-				 " filterSustainLevel: " + filterSustainLevel +
-				 " filterAttackEnd: " + filterAttackEnd);
-*/
-	if (!filterAttackEnd) 
-				filterAttackEnd=0.05; // tweak to get target decay to work properly
-	this.filter1.detune.setValueAtTime( 0, now );
-	this.filter1.detune.linearRampToValueAtTime( filterAttackLevel, now+filterAttackEnd );
-	this.filter2.detune.setValueAtTime( 0, now );
-	this.filter2.detune.linearRampToValueAtTime( filterAttackLevel, now+filterAttackEnd );
-	this.filter1.detune.setTargetAtTime( filterSustainLevel, now+filterAttackEnd, (currentFilterEnvD/100.0) );
-	this.filter2.detune.setTargetAtTime( filterSustainLevel, now+filterAttackEnd, (currentFilterEnvD/100.0) );
-
-	this.osc1.start(0);
-	this.osc2.start(0);
-	this.modOsc.start(0);
 }
 
 
@@ -648,145 +525,6 @@ Voice.prototype.noteOff = function() {
 	this.osc2.stop( release );
 }
 
-var currentOctave = 3;
-var modOscFreqMultiplier = 1;
-var moDouble = false;
-var moQuadruple = false;
-
-function changeModMultiplier() {
-	modOscFreqMultiplier = (moDouble?2:1)*(moQuadruple?4:1);
-	onUpdateModFrequency( currentModFrequency );
-}
-
-function keyDown( ev ) {
-	if ((ev.keyCode==49)||(ev.keyCode==50)) {
-		if (ev.keyCode==49)
-			moDouble = true;
-		else if (ev.keyCode==50)
-			moQuadruple = true;
-		changeModMultiplier();
-	}
-
-	var note = keys[ev.keyCode];
-	if (note) {
-		 console.log('noteOn here');
-		 
-		if(midiOut) {
-			// we are going to call midiOut here
-			console.log('midiOut');
-			
-		} else {
-			noteOn( note + 12*(3-currentOctave), 0.75 );
-		}
-	}
-	console.log( "key down: " + ev.keyCode );
-
-	return false;
-}
-
-function keyUp( ev ) {
-	if ((ev.keyCode==49)||(ev.keyCode==50)) {
-		if (ev.keyCode==49)
-			moDouble = false;
-		else if (ev.keyCode==50)
-			moQuadruple = false;
-		changeModMultiplier();
-	}
-
-	var note = keys[ev.keyCode];
-	if (note)
-		noteOff( note + 12*(3-currentOctave) );
-//	console.log( "key up: " + ev.keyCode );
-
-	return false;
-}
-var pointers=[];
-
-function touchstart( ev ) {
-	for (var i=0; i<ev.targetTouches.length; i++) {
-	    var touch = ev.targetTouches[0];
-		var element = touch.target;
-
-		var note = parseInt( element.id.substring( 1 ) );
-		console.log( "touchstart: id: " + element.id + "identifier: " + touch.identifier + " note:" + note );
-		if (!isNaN(note)) {
-			noteOn( note + 12*(3-currentOctave), 0.75 );
-			var keybox = document.getElementById("keybox")
-			pointers[touch.identifier]=note;
-		}
-	}
-	ev.preventDefault();
-}
-
-function touchmove( ev ) {
-	for (var i=0; i<ev.targetTouches.length; i++) {
-	    var touch = ev.targetTouches[0];
-		var element = touch.target;
-
-		var note = parseInt( element.id.substring( 1 ) );
-		console.log( "touchmove: id: " + element.id + "identifier: " + touch.identifier + " note:" + note );
-		if (!isNaN(note) && pointers[touch.identifier] && pointers[touch.identifier]!=note) {
-			noteOff(pointers[touch.identifier] + 12*(3-currentOctave));
-			noteOn( note + 12*(3-currentOctave), 0.75 );
-			var keybox = document.getElementById("keybox")
-			pointers[touch.identifier]=note;
-		}
-	}
-	ev.preventDefault();
-}
-
-function touchend( ev ) {
-	var note = parseInt( ev.target.id.substring( 1 ) );
-	console.log( "touchend: id: " + ev.target.id + " note:" + note );
-	if (note != NaN)
-		noteOff( note + 12*(3-currentOctave) );
-	pointers[ev.pointerId]=null;
-	var keybox = document.getElementById("keybox")
-	ev.preventDefault();
-}
-
-function touchcancel( ev ) {
-	console.log( "touchcancel" );
-	ev.preventDefault();
-}
-
-function pointerDown( ev ) {
-	var note = parseInt( ev.target.id.substring( 1 ) );
-	if (pointerDebugging)
-		console.log( "pointer down: id: " + ev.pointerId
-			+ " target: " + ev.target.id + " note:" + note );
-	if (!isNaN(note)) {
-		noteOn( note + 12*(3-currentOctave), 0.75 );
-		var keybox = document.getElementById("keybox")
-		pointers[ev.pointerId]=note;
-	}
-	ev.preventDefault();
-}
-
-function pointerMove( ev ) {
-	var note = parseInt( ev.target.id.substring( 1 ) );
-	if (pointerDebugging)
-		console.log( "pointer move: id: " + ev.pointerId 
-			+ " target: " + ev.target.id + " note:" + note );
-	if (!isNaN(note) && pointers[ev.pointerId] && pointers[ev.pointerId]!=note) {
-		if (pointers[ev.pointerId])
-			noteOff(pointers[ev.pointerId] + 12*(3-currentOctave));
-		noteOn( note + 12*(3-currentOctave), 0.75 );
-		pointers[ev.pointerId]=note;
-	}
-	ev.preventDefault();
-}
-
-function pointerUp( ev ) {
-	var note = parseInt( ev.target.id.substring( 1 ) );
-	if (pointerDebugging)
-		console.log( "pointer up: id: " + ev.pointerId + " note:" + note );
-	if (note != NaN)
-		noteOff( note + 12*(3-currentOctave) );
-	pointers[ev.pointerId]=null;
-	var keybox = document.getElementById("keybox")
-	ev.preventDefault();
-}
 
 
 function onChangeOctave( ev ) {
@@ -794,67 +532,17 @@ function onChangeOctave( ev ) {
 }
 
 
-function initAudio() {
-	window.AudioContext = window.AudioContext || window.webkitAudioContext;
-	try {
-    	audioContext = new AudioContext();
-  	}
-  	catch(e) {
-    	alert('The Web Audio API is apparently not supported in this browser.');
-  	}
+function initialize() {
 
+	alert('initailize');
+	
 	window.addEventListener('keydown', keyDown, false);
 	window.addEventListener('keyup', keyUp, false);
 	setupSynthUI();
 
 	isMobile = (navigator.userAgent.indexOf("Android")!=-1)||(navigator.userAgent.indexOf("iPad")!=-1)||(navigator.userAgent.indexOf("iPhone")!=-1);
 
-	// set up the master effects chain for all voices to connect to.
-	effectChain = audioContext.createGain();
-	waveshaper = new WaveShaper( audioContext );
-    effectChain.connect( waveshaper.input );
-    onUpdateDrive( currentDrive );
-
-    if (!isMobile)
-    	revNode = audioContext.createConvolver();
-    else
-    	revNode = audioContext.createGain();
-	revGain = audioContext.createGain();
-	revBypassGain = audioContext.createGain();
-
-    volNode = audioContext.createGain();
-    volNode.gain.value = currentVol;
-    compressor = audioContext.createDynamicsCompressor();
-    waveshaper.output.connect( revNode );
-    waveshaper.output.connect( revBypassGain );
-    revNode.connect( revGain );
-    revGain.connect( volNode );
-    revBypassGain.connect( volNode );
-    onUpdateReverb( {currentTarget:{value:currentRev}} );
-
-    volNode.connect( compressor );
-    compressor.connect(	audioContext.destination );
-    onUpdateVolume( {currentTarget:{value:currentVol}} );
-
-    if (!isMobile) {
-	  	var irRRequest = new XMLHttpRequest();
-		irRRequest.open("GET", "sounds/irRoom.wav", true);
-		irRRequest.responseType = "arraybuffer";
-		irRRequest.onload = function() {
-	  		audioContext.decodeAudioData( irRRequest.response, 
-	  			function(buffer) { if (revNode) revNode.buffer = buffer; else console.log("no revNode ready!")} );
-		}
-		irRRequest.send();
-	}
 
 }
 
-/*
-if('serviceWorker' in navigator) {  
-  navigator.serviceWorker  
-           .register('./service-worker.js?v=3')  
-           .then(function() { console.log('Service Worker Registered'); });  
-}
-*/
-
-window.onload=initAudio;
+window.onload=initialize;
