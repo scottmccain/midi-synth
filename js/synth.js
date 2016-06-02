@@ -36,6 +36,9 @@ var currentFilterEnvR = 7;
 var currentDrive = 38;
 var currentRev = 32;
 var currentVol = 75;
+
+var currentOctave = 0;
+
 // end initial patch
 
 var keys = new Array( 256 );
@@ -439,93 +442,34 @@ function filterFrequencyFromCutoff( pitch, cutoff ) {
 	return filterFrequency;
 }
 
-function Voice( note, velocity ) {
-	//this.originalFrequency = frequencyFromNoteNumber( note );
-	
-	// send MIDI out here
 
+function keyDown( ev ) {
+
+
+	var note = keys[ev.keyCode];
+	if (note)
+		noteOn( note + 12*(3-currentOctave), 0.75 );
+	console.log( "key down: " + ev.keyCode );
+
+	return false;
 }
 
+function keyUp( ev ) {
+	if ((ev.keyCode==49)||(ev.keyCode==50)) {
+		if (ev.keyCode==49)
+			moDouble = false;
+		else if (ev.keyCode==50)
+			moQuadruple = false;
+		changeModMultiplier();
+	}
 
-Voice.prototype.setModWaveform = function( value ) {
-	this.modOsc.type = value;
+	var note = keys[ev.keyCode];
+	if (note)
+		noteOff( note + 12*(3-currentOctave) );
+//	console.log( "key up: " + ev.keyCode );
+
+	return false;
 }
-
-Voice.prototype.updateModFrequency = function( value ) {
-	this.modOsc.frequency.value = value;
-}
-
-Voice.prototype.updateModOsc1 = function( value ) {
-	this.modOsc1Gain.gain.value = value/10;
-}
-
-Voice.prototype.updateModOsc2 = function( value ) {
-	this.modOsc2Gain.gain.value = value/10;
-}
-
-Voice.prototype.setOsc1Waveform = function( value ) {
-	this.osc1.type = value;
-}
-
-Voice.prototype.updateOsc1Frequency = function( value ) {
-	this.osc1.frequency.value = (this.originalFrequency*Math.pow(2,currentOsc1Octave-2));  // -2 because osc1 is 32', 16', 8'
-	this.osc1.detune.value = currentOsc1Detune + currentPitchWheel * 500;	// value in cents - detune major fifth.
-}
-
-Voice.prototype.updateOsc1Mix = function( value ) {
-	this.osc1Gain.gain.value = 0.005 * value;
-}
-
-Voice.prototype.setOsc2Waveform = function( value ) {
-	this.osc2.type = value;
-}
-
-Voice.prototype.updateOsc2Frequency = function( value ) {
-	this.osc2.frequency.value = (this.originalFrequency*Math.pow(2,currentOsc2Octave-1));
-	this.osc2.detune.value = currentOsc2Detune + currentPitchWheel * 500;	// value in cents - detune major fifth.
-}
-
-Voice.prototype.updateOsc2Mix = function( value ) {
-	this.osc2Gain.gain.value = 0.005 * value;
-}
-
-Voice.prototype.setFilterCutoff = function( value ) {
-	var now =  audioContext.currentTime;
-	var filterFrequency = Math.pow(2, value);
-//	console.log("Filter cutoff: orig:" + this.filter1.frequency.value + " new:" + filterFrequency + " value: " + value );
-	this.filter1.frequency.value = filterFrequency;
-	this.filter2.frequency.value = filterFrequency;
-}
-
-Voice.prototype.setFilterQ = function( value ) {
-	this.filter1.Q.value = value;
-	this.filter2.Q.value = value;
-}
-
-Voice.prototype.setFilterMod = function( value ) {
-	this.modFilterGain.gain.value = currentFilterMod*24;
-//	console.log( "filterMod.gain=" + currentFilterMod*24);
-}
-
-Voice.prototype.noteOff = function() {
-	var now =  audioContext.currentTime;
-	var release = now + (currentEnvR/10.0);	
-    var initFilter = filterFrequencyFromCutoff( this.originalFrequency, currentFilterCutoff/100 * (1.0-(currentFilterEnv/100.0)) );
-
-//    console.log("noteoff: now: " + now + " val: " + this.filter1.frequency.value + " initF: " + initFilter + " fR: " + currentFilterEnvR/100 );
-	this.envelope.gain.cancelScheduledValues(now);
-	this.envelope.gain.setValueAtTime( this.envelope.gain.value, now );  // this is necessary because of the linear ramp
-	this.envelope.gain.setTargetAtTime(0.0, now, (currentEnvR/100));
-	this.filter1.detune.cancelScheduledValues(now);
-	this.filter1.detune.setTargetAtTime( 0, now, (currentFilterEnvR/100.0) );
-	this.filter2.detune.cancelScheduledValues(now);
-	this.filter2.detune.setTargetAtTime( 0, now, (currentFilterEnvR/100.0) );
-
-	this.osc1.stop( release );
-	this.osc2.stop( release );
-}
-
-
 
 function onChangeOctave( ev ) {
 	currentOctave = ev.target.selectedIndex;
