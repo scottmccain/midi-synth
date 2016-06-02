@@ -1,7 +1,6 @@
-var cacheName = 'midi-synth-cache-1-1';  
+var cacheName = 'midi-synth-cache-1-1-234';  
 var filesToCache = [  
   './',  
-  './index.html',
   './img/icons/128x128.png',  
   './img/icons/144x144.png',  
   './img/icons/152x152.png',  
@@ -14,13 +13,9 @@ var filesToCache = [
   './img/switch_toggle.png',  
   './img/vsliderbody.png',  
   './img/vsliderknob.png',  
-  './js/midi.js',  
   './js/platform.js',  
   './js/platform.js.map',  
   './js/polymer.js',  
-  './js/synth.js',  
-  './js/ui.js',  
-  './js/waveshaper.js', 
   './sounds/irRoom.wav', 
   './styles/main.css',  
   './webcomponents/controls.html',  

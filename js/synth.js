@@ -121,6 +121,12 @@ function frequencyFromNoteNumber( note ) {
 
 function noteOn( note, velocity ) {
 	console.log("note on: " + note );
+	
+	if(midiOut) {
+		midiOut.send( new Uint8Array( [ 0x90, 0x45, 0x7f ] ) );
+		//console.log('midiout here');
+	}
+	
 	if (voices[note] == null) {
 		// Create a new synth node
 		voices[note] = new Voice(note, velocity);
@@ -662,8 +668,17 @@ function keyDown( ev ) {
 	}
 
 	var note = keys[ev.keyCode];
-	if (note)
-		noteOn( note + 12*(3-currentOctave), 0.75 );
+	if (note) {
+		 console.log('noteOn here');
+		 
+		if(midiOut) {
+			// we are going to call midiOut here
+			console.log('midiOut');
+			
+		} else {
+			noteOn( note + 12*(3-currentOctave), 0.75 );
+		}
+	}
 	console.log( "key down: " + ev.keyCode );
 
 	return false;
@@ -834,9 +849,12 @@ function initAudio() {
 
 }
 
+/*
 if('serviceWorker' in navigator) {  
   navigator.serviceWorker  
-           .register('./service-worker.js')  
+           .register('./service-worker.js?v=3')  
            .then(function() { console.log('Service Worker Registered'); });  
 }
+*/
+
 window.onload=initAudio;
