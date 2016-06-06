@@ -37,7 +37,11 @@ var currentDrive = 38;
 var currentRev = 32;
 var currentVol = 75;
 
-var currentOctave = 0;
+
+var currentOctave = 3;
+var modOscFreqMultiplier = 1;
+var moDouble = false;
+var moQuadruple = false;
 
 // end initial patch
 
