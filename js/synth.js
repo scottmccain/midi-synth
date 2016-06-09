@@ -132,6 +132,10 @@ function noteOn( note, velocity ) {
 	if(midiOut) {
 		midiOut.send( new Uint8Array( [ 0x90, note, velocity ] ) );
 	}
+	
+	var e = document.getElementById( "k" + note );
+	if (e)
+		e.classList.add("pressed");	
 }
 
 function noteOff( note ) {
@@ -140,6 +144,11 @@ function noteOff( note ) {
 		midiOut.send( new Uint8Array( [ 0x80, note, 0x00 ] ) );
 		//console.log('midiout here');
 	}
+	
+	var e = document.getElementById( "k" + note );
+	if (e)
+		e.classList.remove("pressed");
+	
 	
 }
 
