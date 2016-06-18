@@ -152,8 +152,7 @@ function setupSynthUI() {
 	master.appendChild( createKnob( "drive", "drive",    80,   10, 20, 0, 100, currentDrive, "yellow", onUpdateDrive ) );
 	master.appendChild( createKnob( "reverb", "reverb",     80,  100, 20, 0, 100, currentRev, "yellow", onUpdateReverb ) );
 	master.appendChild( createKnob( "volume", "volume",     80,  190, 20, 0, 100, currentVol, "yellow", onUpdateVolume ) );
-	master.appendChild( createDropdown( "midiIn", "midi_in", 280, 15, ["-no MIDI-"], 0, selectMIDIIn ) );
-	master.appendChild( createDropdown( "midiOut", "midi_out", 280, 60, ["-no MIDI-"], 0, selectMIDIOut ) );
+	master.appendChild( createDropdown( "midiOut", "midi_out", 280, 15, ["-no MIDI-"], 0, selectMIDIOut ) );
 	synthBox.appendChild( master );
 
 	keybox = document.getElementById("keybox");

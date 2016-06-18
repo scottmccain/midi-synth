@@ -130,7 +130,8 @@ function noteOn( note, velocity ) {
 	console.log("note on: " + note );
 	
 	if(midiOut) {
-		midiOut.send( new Uint8Array( [ 0x90, note, velocity ] ) );
+		console.log('sending note on: ', note, velocity);
+		midiOut.send( [ 0x90, note, 100 * velocity ] );
 	}
 	
 	var e = document.getElementById( "k" + note );
@@ -142,7 +143,7 @@ function noteOff( note ) {
 	
 	if(midiOut) {
 		midiOut.send( new Uint8Array( [ 0x80, note, 0x00 ] ) );
-		//console.log('midiout here');
+		console.log('midiout here');
 	}
 	
 	var e = document.getElementById( "k" + note );
@@ -484,6 +485,94 @@ function keyUp( ev ) {
 	return false;
 }
 
+var pointers=[];
+
+function touchstart( ev ) {
+	for (var i=0; i<ev.targetTouches.length; i++) {
+	    var touch = ev.targetTouches[0];
+		var element = touch.target;
+
+		var note = parseInt( element.id.substring( 1 ) );
+		console.log( "touchstart: id: " + element.id + "identifier: " + touch.identifier + " note:" + note );
+		if (!isNaN(note)) {
+			noteOn( note + 12*(3-currentOctave), 0.75 );
+			var keybox = document.getElementById("keybox")
+			pointers[touch.identifier]=note;
+		}
+	}
+	ev.preventDefault();
+}
+
+function touchmove( ev ) {
+	for (var i=0; i<ev.targetTouches.length; i++) {
+	    var touch = ev.targetTouches[0];
+		var element = touch.target;
+
+		var note = parseInt( element.id.substring( 1 ) );
+		console.log( "touchmove: id: " + element.id + "identifier: " + touch.identifier + " note:" + note );
+		if (!isNaN(note) && pointers[touch.identifier] && pointers[touch.identifier]!=note) {
+			noteOff(pointers[touch.identifier] + 12*(3-currentOctave));
+			noteOn( note + 12*(3-currentOctave), 0.75 );
+			var keybox = document.getElementById("keybox")
+			pointers[touch.identifier]=note;
+		}
+	}
+	ev.preventDefault();
+}
+
+function touchend( ev ) {
+	var note = parseInt( ev.target.id.substring( 1 ) );
+	console.log( "touchend: id: " + ev.target.id + " note:" + note );
+	if (note != NaN)
+		noteOff( note + 12*(3-currentOctave) );
+	pointers[ev.pointerId]=null;
+	var keybox = document.getElementById("keybox")
+	ev.preventDefault();
+}
+
+function touchcancel( ev ) {
+	console.log( "touchcancel" );
+	ev.preventDefault();
+}
+
+function pointerDown( ev ) {
+	var note = parseInt( ev.target.id.substring( 1 ) );
+	if (pointerDebugging)
+		console.log( "pointer down: id: " + ev.pointerId
+			+ " target: " + ev.target.id + " note:" + note );
+	if (!isNaN(note)) {
+		noteOn( note + 12*(3-currentOctave), 0.75 );
+		var keybox = document.getElementById("keybox")
+		pointers[ev.pointerId]=note;
+	}
+	ev.preventDefault();
+}
+
+function pointerMove( ev ) {
+	var note = parseInt( ev.target.id.substring( 1 ) );
+	if (pointerDebugging)
+		console.log( "pointer move: id: " + ev.pointerId 
+			+ " target: " + ev.target.id + " note:" + note );
+	if (!isNaN(note) && pointers[ev.pointerId] && pointers[ev.pointerId]!=note) {
+		if (pointers[ev.pointerId])
+			noteOff(pointers[ev.pointerId] + 12*(3-currentOctave));
+		noteOn( note + 12*(3-currentOctave), 0.75 );
+		pointers[ev.pointerId]=note;
+	}
+	ev.preventDefault();
+}
+
+function pointerUp( ev ) {
+	var note = parseInt( ev.target.id.substring( 1 ) );
+	if (pointerDebugging)
+		console.log( "pointer up: id: " + ev.pointerId + " note:" + note );
+	if (note != NaN)
+		noteOff( note + 12*(3-currentOctave) );
+	pointers[ev.pointerId]=null;
+	var keybox = document.getElementById("keybox")
+	ev.preventDefault();
+}
+
 function onChangeOctave( ev ) {
 	currentOctave = ev.target.selectedIndex;
 }
@@ -491,8 +580,6 @@ function onChangeOctave( ev ) {
 
 function initialize() {
 
-	alert('initailize');
-	
 	window.addEventListener('keydown', keyDown, false);
 	window.addEventListener('keyup', keyUp, false);
 	setupSynthUI();
